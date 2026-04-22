@@ -30,6 +30,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .screen{display:none;min-height:100dvh}
 .screen.active{display:flex;flex-direction:column}
 .theme-btn{position:fixed;top:1.1rem;right:1.1rem;z-index:200;background:var(--surface);border:1.5px solid var(--border);border-radius:50px;padding:.35rem .85rem;font-size:.82rem;cursor:pointer;font-family:var(--font);color:var(--text2);display:flex;align-items:center;gap:.35rem;box-shadow:var(--sh)}
+#exam.active~.theme-btn,.theme-btn.hidden{display:none!important}
 
 /* LOGIN */
 #login{align-items:center;justify-content:center;padding:2rem 1.5rem;gap:2rem}
@@ -393,6 +394,9 @@ function go(id){
   if(id==='history') renderHistory();
   if(id==='home') renderList();
   if(id==='review') renderReview();
+  // Hide theme button during exam to avoid overlap with Terminar button
+  const themeBtn=document.querySelector('.theme-btn');
+  if(themeBtn) themeBtn.style.display=id==='exam'?'none':'flex';
 }
 function toast(msg,ms=2500){
   const el=document.getElementById('toast');
