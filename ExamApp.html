@@ -290,6 +290,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   <div class="exam-foot">
     <button class="btn-skip" id="btn-prev" onclick="prevQ()">← Anterior</button>
     <button class="btn-show" id="btn-show" onclick="revealQ()" disabled>Mostrar correcta 👁️</button>
+    <button class="btn-skip" id="btn-clear" onclick="clearSel()" disabled style="flex:.8">✕</button>
     <button class="btn-nxt" id="btn-nxt" onclick="next()">Siguiente →</button>
   </div>
 </div>
@@ -570,10 +571,13 @@ function renderQ(){
   const btnPrev=document.getElementById('btn-prev');
 
   if(btnPrev) btnPrev.disabled=(qi===0);
+  const btnClear=document.getElementById('btn-clear');
+  if(btnClear) btnClear.disabled=!ans[qi].sel;
 
   if(ans[qi].rev){
     // Already revealed - restore state
     btnShow.disabled=true;
+    if(btnClear) btnClear.disabled=true;
     restoreState();
   } else {
     btnShow.disabled=!ans[qi].sel;
@@ -593,8 +597,16 @@ function selectOpt(l){
     b.classList.remove('sel');
     if(b.dataset.l===l) b.classList.add('sel');
   });
-  // Enable "Mostrar correcta" button
   document.getElementById('btn-show').disabled=false;
+  document.getElementById('btn-clear').disabled=false;
+}
+
+function clearSel(){
+  if(ans[qi].rev) return;
+  ans[qi].sel=null;
+  document.querySelectorAll('.opt').forEach(b=>b.classList.remove('sel'));
+  document.getElementById('btn-show').disabled=true;
+  document.getElementById('btn-clear').disabled=true;
 }
 
 function revealQ(){
@@ -772,7 +784,8 @@ function renderReviewList(){
 }
 
 // ── HISTORY ─────────────────────────────────────────────
-function deleteHist(idx){
+function deleteHist(idx,name){
+  if(!confirm('\u00bfEliminar el resultado de "'+name+'"?')) return;
   try{
     const h=JSON.parse(localStorage.getItem('hist')||'[]');
     h.splice(idx,1);
@@ -782,7 +795,7 @@ function deleteHist(idx){
 }
 
 function clearAllHist(){
-  if(confirm('\u00bfBorrar todo el historial?')){
+  if(confirm('\u00bfBorrar todo el historial? Esta acci\u00f3n no se puede deshacer.')){
     localStorage.removeItem('hist');
     renderHistory();
   }
