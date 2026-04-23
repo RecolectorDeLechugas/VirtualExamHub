@@ -122,7 +122,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .opt.ko .opt-ltr{background:var(--err);color:#fff}
 .opt.blank-ok{border-color:var(--ok);background:var(--ok-soft)}
 .opt.blank-ok .opt-ltr{background:var(--ok);color:#fff}
-.expl{background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--r);padding:1rem 1.2rem;font-size:.84rem;line-height:1.65;color:var(--text2);display:none;animation:fi .2s ease}
+.expl{background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--r);padding:1rem 1.2rem;font-size:.84rem;line-height:1.65;color:var(--text2);display:none;animation:fi .2s ease;white-space:pre-wrap}
 .expl.show{display:block}
 .expl-lbl{font-size:.7rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:.5rem}
 @keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
@@ -249,10 +249,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
           <button class="num-b" onclick="adjQ(5)">＋</button>
         </div>
       </div>
-      <div class="cfg-row">
-        <div><div class="cfg-lbl">Orden aleatorio</div><div class="cfg-desc">Mezcla preguntas y opciones</div></div>
-        <button class="tog on" id="tog-rnd" onclick="this.classList.toggle('on')"></button>
-      </div>
+
       <div class="cfg-row">
         <div><div class="cfg-lbl">Mostrar explicación</div><div class="cfg-desc">Texto al revelar la respuesta</div></div>
         <button class="tog on" id="tog-exp" onclick="this.classList.toggle('on')"></button>
@@ -291,7 +288,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     <div class="expl" id="expl"><div class="expl-lbl">Explicación</div><div id="expl-txt"></div></div>
   </div>
   <div class="exam-foot">
-    <button class="btn-skip" id="btn-skip" onclick="skipQ()">En blanco</button>
+    <button class="btn-skip" id="btn-prev" onclick="prevQ()">← Anterior</button>
     <button class="btn-show" id="btn-show" onclick="revealQ()" disabled>Mostrar correcta 👁️</button>
     <button class="btn-nxt" id="btn-nxt" onclick="next()">Siguiente →</button>
   </div>
@@ -383,7 +380,7 @@ let qs=[];
 let qi=0;
 // ans: {sel: letter|null, rev: bool, skipped: bool}
 let ans=[];
-let cfgNQ=100,cfgTimer=0,cfgExp=true,cfgRnd=true;
+let cfgNQ=100,cfgTimer=0,cfgExp=true;
 let timerSecs=0,timerIv=null,t0=null;
 let reviewTab='ok';
 
@@ -451,7 +448,7 @@ function parseExam(text){
     const explParts=[];
     while(i<lines.length && !lines[i].match(/^Q\d+$/)){explParts.push(lines[i]);i++;}
     if(qtext && opts.length>=2 && ansLetter){
-      result.push({q:qtext,opts,ans:ansLetter,expl:explParts.join(' ')});
+      result.push({q:qtext,opts,ans:ansLetter,expl:explParts.join('\n')});
     }
   }
   return result;
@@ -519,7 +516,6 @@ function openConfig(name){
   cfgNQ=Math.min(100,tot); cfgTimer=0;
   document.getElementById('cfg-nq').textContent=cfgNQ;
   document.getElementById('cfg-timer').textContent='—';
-  document.getElementById('tog-rnd').className='tog on';
   document.getElementById('tog-exp').className='tog on';
   go('config');
 }
@@ -531,11 +527,9 @@ function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random
 
 function startExam(){
   cfgExp=document.getElementById('tog-exp').classList.contains('on');
-  cfgRnd=document.getElementById('tog-rnd').classList.contains('on');
 
   let pool=[...DB[curExam]];
-  if(cfgRnd) pool=shuffle(pool);
-  qs=pool.slice(0,cfgNQ).map(q=>({...q,opts:cfgRnd?shuffle([...q.opts]):[...q.opts]}));
+  qs=pool.slice(0,cfgNQ).map(q=>({...q,opts:[...q.opts]}));
   qi=0;
   ans=qs.map(()=>({sel:null,rev:false,skipped:false}));
   t0=Date.now();
@@ -573,15 +567,15 @@ function renderQ(){
   });
 
   const btnShow=document.getElementById('btn-show');
-  const btnSkip=document.getElementById('btn-skip');
+  const btnPrev=document.getElementById('btn-prev');
+
+  if(btnPrev) btnPrev.disabled=(qi===0);
 
   if(ans[qi].rev){
     // Already revealed - restore state
-    btnSkip.disabled=true;
     btnShow.disabled=true;
     restoreState();
   } else {
-    btnSkip.disabled=false;
     btnShow.disabled=!ans[qi].sel;
     // Restore selection if any
     if(ans[qi].sel){
@@ -620,7 +614,6 @@ function revealQ(){
     document.getElementById('expl').className='expl show';
   }
   document.getElementById('btn-show').disabled=true;
-  document.getElementById('btn-skip').disabled=true;
   setTimeout(()=>document.getElementById('exam-body').scrollTo({top:9999,behavior:'smooth'}),120);
 }
 
@@ -638,25 +631,10 @@ function restoreState(){
   }
 }
 
-function skipQ(){
-  // Mark as blank and reveal correct answer
-  ans[qi].skipped=true;
-  ans[qi].rev=true;
-  ans[qi].sel=null;
-
-  const q=qs[qi];
-  document.querySelectorAll('.opt').forEach(b=>{
-    b.disabled=true;
-    b.classList.remove('sel');
-    if(b.dataset.l===q.ans) b.classList.add('blank-ok');
-  });
-  if(cfgExp && q.expl){
-    document.getElementById('expl-txt').textContent=q.expl;
-    document.getElementById('expl').className='expl show';
-  }
-  document.getElementById('btn-show').disabled=true;
-  document.getElementById('btn-skip').disabled=true;
-  setTimeout(()=>document.getElementById('exam-body').scrollTo({top:9999,behavior:'smooth'}),120);
+function prevQ(){
+  if(qi<=0) return;
+  qi--;
+  renderQ();
 }
 
 function next(){
@@ -704,7 +682,8 @@ function finish(){
   const nota=correct-wrong/3;
   const notaRound=Math.round(nota*100)/100;
   const nota100=total!==100?Math.round((nota/total*100)*100)/100:null;
-  const pct=Math.round(correct/total*100);
+  // Porcentaje basado en la fórmula A-(E/3) sobre el total
+  const pct=Math.max(0,Math.round(nota/total*100));
 
   document.getElementById('r-pct').textContent=pct+'%';
   document.getElementById('r-ok').textContent=correct;
@@ -778,7 +757,7 @@ function renderReviewList(){
     });
 
     let explHtml='';
-    if(q.expl) explHtml=`<div style="font-size:.8rem;color:var(--text3);margin-top:.2rem;line-height:1.55">${q.expl}</div>`;
+    if(q.expl) explHtml=`<div style="font-size:.8rem;color:var(--text3);margin-top:.2rem;line-height:1.55;white-space:pre-wrap">${q.expl}</div>`;
 
     item.innerHTML=`
       <div class="review-qnum">Pregunta ${i+1}</div>
