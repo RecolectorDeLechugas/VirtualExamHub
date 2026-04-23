@@ -683,9 +683,10 @@ function finish(){
   const notaRound=Math.round(nota*100)/100;
   const nota100=total!==100?Math.round((nota/total*100)*100)/100:null;
   // Porcentaje basado en la fórmula A-(E/3) sobre el total
-  const pct=Math.max(0,Math.round(nota/total*100));
+  const pctRaw=Math.max(0,nota/total*100);
+  const pct=Math.round(pctRaw*100)/100;
 
-  document.getElementById('r-pct').textContent=pct+'%';
+  document.getElementById('r-pct').textContent=(pct%1===0?pct:pct.toFixed(2))+'%';
   document.getElementById('r-ok').textContent=correct;
   document.getElementById('r-ko').textContent=wrong;
   document.getElementById('r-sk').textContent=blank;
@@ -704,6 +705,7 @@ function finish(){
   document.getElementById('r-name').textContent=curExam;
 
   saveHist({name:curExam,date:new Date().toLocaleDateString('es-ES'),nota:notaRound,pct,correct,wrong,blank,total});
+  // pct ya tiene decimales
   reviewTab='ok';
   go('results');
 }
@@ -770,18 +772,41 @@ function renderReviewList(){
 }
 
 // ── HISTORY ─────────────────────────────────────────────
+function deleteHist(idx){
+  try{
+    const h=JSON.parse(localStorage.getItem('hist')||'[]');
+    h.splice(idx,1);
+    localStorage.setItem('hist',JSON.stringify(h));
+    renderHistory();
+  }catch(e){}
+}
+
+function clearAllHist(){
+  if(confirm('\u00bfBorrar todo el historial?')){
+    localStorage.removeItem('hist');
+    renderHistory();
+  }
+}
+
 function renderHistory(){
   const el=document.getElementById('hist-body');
   el.innerHTML='';
   try{
     const h=JSON.parse(localStorage.getItem('hist')||'[]');
-    if(!h.length){el.innerHTML='<div class="empty"><div class="empty-ico">📊</div>Aún no hay resultados</div>';return;}
-    h.forEach(e=>{
+    if(!h.length){el.innerHTML='<div class="empty"><div class="empty-ico">\ud83d\udcca</div>A\u00fan no hay resultados</div>';return;}
+    const clearBtn=document.createElement('button');
+    clearBtn.className='btn-danger';
+    clearBtn.style.marginBottom='.5rem';
+    clearBtn.textContent='\ud83d\uddd1 Borrar todo el historial';
+    clearBtn.onclick=clearAllHist;
+    el.appendChild(clearBtn);
+    h.forEach((e,idx)=>{
       const d=document.createElement('div');
       d.className='hist-item';
-      const nota=e.nota!==undefined?e.nota:e.pct;
-      const c=e.pct>=80?'var(--ok)':e.pct>=60?'var(--accent)':'var(--err)';
-      d.innerHTML=`<div><div class="hist-name">${e.name}</div><div class="hist-date">${e.date} · ✅${e.correct} ❌${e.wrong} ⬜${e.blank||0} / ${e.total}</div></div><div class="hist-pct" style="color:${c}">${typeof nota==='number'&&nota%1!==0?nota.toFixed(2):nota}</div>`;
+      const pctVal=typeof e.pct==='number'?e.pct:0;
+      const pctStr=pctVal%1===0?String(pctVal):pctVal.toFixed(2);
+      const c=pctVal>=80?'var(--ok)':pctVal>=60?'var(--accent)':'var(--err)';
+      d.innerHTML='<div><div class="hist-name">'+e.name+'</div><div class="hist-date">'+e.date+' \u00b7 \u2705'+e.correct+' \u274c'+e.wrong+' \u2b1c'+(e.blank||0)+' / '+e.total+'</div></div><div style="display:flex;align-items:center;gap:.7rem"><div class="hist-pct" style="color:'+c+'">'+pctStr+'%</div><button class="del-btn" onclick="deleteHist('+idx+')" title="Borrar">\ud83d\uddd1</button></div>';
       el.appendChild(d);
     });
   }catch(err){}
